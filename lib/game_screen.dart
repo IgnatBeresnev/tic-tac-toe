@@ -1,57 +1,101 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:tictactoe/player.dart';
+import 'package:tictactoe/stomp/event_handler.dart';
 
 class GamePage extends StatefulWidget {
-  final playerName;
-  final opponentName;
-  final firstTurnPlayerName;
+  final String gameId;
+  final Player player;
+  final String opponentName;
+  final bool isOpeningMove;
+  final EventHandler eventHandler;
 
-  const GamePage(
-      {Key key, this.playerName, this.opponentName, this.firstTurnPlayerName})
+  const GamePage({Key key,
+    this.gameId,
+    this.player,
+    this.opponentName,
+    this.isOpeningMove,
+    this.eventHandler})
       : super(key: key);
 
   @override
-  State<StatefulWidget> createState() => GamePageState(
-      playerName, opponentName, playerName == firstTurnPlayerName);
+  State<StatefulWidget> createState() => GamePageState(isOpeningMove);
+
+  String getMySymbol() {
+    return isOpeningMove ? "0" : "X";
+  }
+
+  String getOpponentSymbol() {
+    return isOpeningMove ? "X" : "0";
+  }
 }
 
-class GamePageState extends State<GamePage> {
-  final _playerName;
-  final _opponentName;
-  var _isMyTurn;
+enum GameOverResult { draw, player_won, opponent_won }
 
-  // TODO clear
+class GamePageState extends State<GamePage> {
   final List<List> _field = [
-    ["X", "O", "X"],
-    ["O", "O", "O"],
-    ["O", "X", "O"]
+    ["", "", ""],
+    ["", "", ""],
+    ["", "", ""]
   ];
 
-  GamePageState(this._playerName, this._opponentName, this._isMyTurn);
+  var _isMyTurn;
+  var _gameOverResult;
+
+  GamePageState(this._isMyTurn);
 
   @override
   Widget build(BuildContext context) {
+    _subscribeToEvents();
     return Scaffold(
         body: Center(
-      child: SizedBox(
-        width: 400,
-        child: Column(
-          children: <Widget>[
-            Padding(
-                padding: const EdgeInsets.only(top: 150),
-                child: _buildHeader()),
-            Divider(thickness: 3, color: Colors.blueGrey),
-            Padding(
-              padding: const EdgeInsets.only(top: 15),
-              child: _whoseTurnLine(),
+          child: SizedBox(
+            width: 400,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                _buildHeader(),
+                Divider(thickness: 3, color: Colors.blueGrey),
+                Padding(
+                  padding: const EdgeInsets.only(top: 15),
+                  child: _headerWidget(),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 30),
+                  child: _buildField(),
+                )
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 30),
-              child: _buildField(),
-            )
-          ],
-        ),
-      ),
-    ));
+          ),
+        ));
+  }
+
+  void _subscribeToEvents() {
+    widget.eventHandler.onEvent("GameMove", (Map<String, dynamic> eventMap) {
+      final wasMyMove = eventMap["playerName"] == widget.player.name;
+      setState(() {
+        _field[eventMap["y"]][eventMap["x"]] =
+        wasMyMove ? widget.getMySymbol() : widget.getOpponentSymbol();
+        _isMyTurn = _gameOverResult == null && !wasMyMove;
+      });
+    });
+
+    widget.eventHandler.onEvent("GameWin", (Map<String, dynamic> eventMap) {
+      setState(() {
+        final playerWon = eventMap["winnerName"] == widget.player.name;
+        _gameOverResult =
+        playerWon ? GameOverResult.player_won : GameOverResult.opponent_won;
+      });
+    });
+
+    widget.eventHandler.onEvent("GameDraw", (Map<String, dynamic> eventMap) {
+      setState(() {
+        _gameOverResult = GameOverResult.draw;
+      });
+    });
   }
 
   Widget _buildHeader() {
@@ -59,7 +103,11 @@ class GamePageState extends State<GamePage> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: <Widget>[
         Column(
-          children: <Widget>[_gameParticipantBadge(name: _playerName, left: true)],
+          children: <Widget>[
+            _gameParticipantBadge(
+                name: "${widget.player.name} (${widget.getMySymbol()})",
+                left: true)
+          ],
         ),
         Column(
           children: <Widget>[
@@ -69,7 +117,9 @@ class GamePageState extends State<GamePage> {
         ),
         Column(
           children: <Widget>[
-            _gameParticipantBadge(name: _opponentName, left: false)
+            _gameParticipantBadge(
+                name: "${widget.opponentName} (${widget.getOpponentSymbol()})",
+                left: false)
           ],
         )
       ],
@@ -90,13 +140,41 @@ class GamePageState extends State<GamePage> {
     );
   }
 
-  Widget _whoseTurnLine() {
-    final text = _isMyTurn ? "Your turn" : "$_opponentName's turn";
-    return Text(text,
-        style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            color: _isMyTurn ? Colors.green : Colors.red));
+  Widget _headerWidget() {
+    if (_gameOverResult == null) {
+      final text = _isMyTurn ? "Your turn" : "${widget.opponentName}'s turn";
+      return Text(text,
+          style: TextStyle(
+              fontSize: 20,
+              color: _isMyTurn ? Colors.greenAccent : Colors.redAccent));
+    } else {
+      final text = _getGameOverText();
+      return Text(text,
+          style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 30,
+              color: _getGameOverColor()));
+    }
+  }
+
+  String _getGameOverText() {
+    if (_gameOverResult == GameOverResult.draw) {
+      return "Draw ¯\\_(ツ)_/¯";
+    } else if (_gameOverResult == GameOverResult.player_won) {
+      return "YOU'VE WON! Yay! :)";
+    } else {
+      return "You've lost :(";
+    }
+  }
+
+  Color _getGameOverColor() {
+    if (_gameOverResult == GameOverResult.draw) {
+      return Colors.yellow;
+    } else if (_gameOverResult == GameOverResult.player_won) {
+      return Colors.green;
+    } else {
+      return Colors.red;
+    }
   }
 
   Widget _buildField() {
@@ -135,19 +213,25 @@ class GamePageState extends State<GamePage> {
           child: MaterialButton(
             color: Colors.white,
             disabledColor: Colors.white70,
-            onPressed: _isMyTurn ? () => {_makeMove(x, y)} : null,
+            onPressed: _isMyTurn ? () => {_sendMove(x, y)} : null,
             child: Text(_field[y][x], style: TextStyle(fontSize: 50)),
           )),
     );
   }
 
-  void _makeMove(int x, int y) {
-    // TODO
-  }
-
-  void updateField() {
-    setState(() {
-      // TODO
-    });
+  void _sendMove(int x, int y) {
+    print("Sending x and y: " + x.toString() + "; " + y.toString());
+    http.post(
+      "http://192.168.0.14:8080/game/" + widget.gameId + "/move",
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Accept': 'application/json'
+      },
+      body: jsonEncode(<String, String>{
+        'playerId': widget.player.id,
+        'x': x.toString(),
+        'y': y.toString(),
+      }),
+    );
   }
 }

@@ -4,7 +4,6 @@
 
 import 'package:flutter/material.dart';
 
-import 'game_screen.dart';
 import 'login_page.dart';
 
 void main() => runApp(MyApp());
@@ -22,5 +21,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-
