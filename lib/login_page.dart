@@ -17,6 +17,8 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   TextStyle style = TextStyle(fontFamily: 'Montserrat', fontSize: 20.0);
 
+  var _loginErrorText = null;
+
   @override
   Widget build(BuildContext context) {
     final nameText = TextEditingController();
@@ -58,6 +60,7 @@ class _LoginPageState extends State<LoginPage> {
       decoration: InputDecoration(
           contentPadding: EdgeInsets.fromLTRB(20.0, 15.0, 20.0, 15.0),
           hintText: "Name",
+          errorText: _loginErrorText,
           border:
           OutlineInputBorder(borderRadius: BorderRadius.circular(20.0))),
     );
@@ -70,6 +73,14 @@ class _LoginPageState extends State<LoginPage> {
       child: MaterialButton(
         padding: EdgeInsets.fromLTRB(20.0, 15.0, 20.0, 15.0),
         onPressed: () {
+          final loginError = validateLoginErrors(nameText.text);
+          if (loginError != null) {
+            setState(() {
+              _loginErrorText = loginError;
+            });
+            return;
+          }
+
           http
               .post(
             "http://192.168.0.14:8080/registration",
@@ -93,7 +104,15 @@ class _LoginPageState extends State<LoginPage> {
                     return MatchmakingPage(
                         player: player, eventHandler: eventHandler);
                   }));
-            } // TODO else
+            } else if (response.statusCode == 409) {
+              setState(() {
+                _loginErrorText = "Name already taken";
+              });
+            } else {
+              setState(() {
+                _loginErrorText = "Unsuccessful: $response";
+              });
+            }
           });
         },
         child: Text("Login",
@@ -102,6 +121,18 @@ class _LoginPageState extends State<LoginPage> {
                 color: Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
+  }
+
+  String validateLoginErrors(String login) {
+    if (login.isEmpty) {
+      return "Am I a joke to you?";
+    } else if (login.contains(" ")) {
+      return "Cannot contain whitespaces";
+    } else if (login.length > 15) {
+      return "Cannot be over 15 chars";
+    } else {
+      return null;
+    }
   }
 
   EventHandler _stompSubscribe(String playerId) {

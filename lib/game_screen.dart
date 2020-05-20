@@ -49,28 +49,69 @@ class GamePageState extends State<GamePage> {
   @override
   Widget build(BuildContext context) {
     _subscribeToEvents();
-    return Scaffold(
-        body: Center(
-          child: SizedBox(
-            width: 400,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: <Widget>[
-                _buildHeader(),
-                Divider(thickness: 3, color: Colors.blueGrey),
-                Padding(
-                  padding: const EdgeInsets.only(top: 15),
-                  child: _headerWidget(),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 30),
-                  child: _buildField(),
-                )
-              ],
+    return WillPopScope(
+      onWillPop: _onBackButtonPressed(),
+      child: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 400,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  _buildHeader(),
+                  Divider(thickness: 3, color: Colors.blueGrey),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 15),
+                    child: _headerWidget(),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 30),
+                    child: _buildField(),
+                  )
+                ],
+              ),
             ),
-          ),
-        ));
+          )),
+    );
+  }
+
+  Function _onBackButtonPressed() {
+    if (_gameOverResult != null) { // already over, can leave freely now
+      return () async => false;
+    } else {
+      return () =>
+          showDialog<bool>(
+              context: context, builder: (c) => _confirmLeaveAlert(c));
+    }
+  }
+
+  Widget _confirmLeaveAlert(BuildContext context) {
+    return AlertDialog(
+      title: Text('Warning'),
+      content: Text('Want to leave? Will count as a loss'),
+      actions: [
+        FlatButton(
+          child: Text('Yes'),
+          onPressed: () {
+            http.post(
+                "http://192.168.0.14:8080/game/" + widget.gameId + "/leave",
+                headers: <String, String>{
+                  'Content-Type': 'application/json; charset=UTF-8',
+                  'Accept': 'application/json'
+                },
+                body: jsonEncode(<String, String>{
+                  'playerId': widget.player.id,
+                }));
+            Navigator.pop(context, true);
+          },
+        ),
+        FlatButton(
+          child: Text('No'),
+          onPressed: () => Navigator.pop(context, false),
+        ),
+      ],
+    );
   }
 
   void _subscribeToEvents() {
@@ -79,7 +120,7 @@ class GamePageState extends State<GamePage> {
       setState(() {
         _field[eventMap["y"]][eventMap["x"]] =
         wasMyMove ? widget.getMySymbol() : widget.getOpponentSymbol();
-        _isMyTurn = _gameOverResult == null && !wasMyMove;
+        _isMyTurn = !wasMyMove;
       });
     });
 
@@ -213,7 +254,10 @@ class GamePageState extends State<GamePage> {
           child: MaterialButton(
             color: Colors.white,
             disabledColor: Colors.white70,
-            onPressed: _isMyTurn ? () => {_sendMove(x, y)} : null,
+            onPressed: _gameOverResult == null && _isMyTurn ? () =>
+            {
+              _sendMove(x, y)
+            } : null,
             child: Text(_field[y][x], style: TextStyle(fontSize: 50)),
           )),
     );

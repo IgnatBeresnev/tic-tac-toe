@@ -26,33 +26,32 @@ class _MatchmakingPageState extends State<MatchmakingPage> {
   Widget build(BuildContext context) {
     _initEventHandler();
 
-    return Scaffold(
-        appBar: AppBar(
-            automaticallyImplyLeading: false,
-            title: Center(child: Text("Matchmaking"))),
-        body: Center(
-          child: Container(
-            width: 400,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Container(
-                    child: _buildMatchMakingButton()),
-                Container(
-                    padding: const EdgeInsets.only(top: 40.0),
-                    child: _buildSearchingProgressBar()),
-              ],
+    return WillPopScope(
+      onWillPop: () async => false,
+      child: Scaffold(
+          appBar: AppBar(
+              automaticallyImplyLeading: false,
+              title: Center(child: Text("Matchmaking"))),
+          body: Center(
+            child: Container(
+              width: 400,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Container(child: _buildMatchMakingButton()),
+                  Container(
+                      padding: const EdgeInsets.only(top: 40.0),
+                      child: _buildSearchingProgressBar()),
+                ],
+              ),
             ),
-          ),
-        ));
+          )),
+    );
   }
 
   void _initEventHandler() {
     widget.eventHandler.onEvent("GameStarted", (Map<String, dynamic> eventMap) {
-      setState(() {
-        _isSearching = false;
-      });
       Navigator.of(context)
           .push(MaterialPageRoute<Scaffold>(builder: (BuildContext context) {
         return GamePage(
@@ -61,7 +60,12 @@ class _MatchmakingPageState extends State<MatchmakingPage> {
             opponentName: eventMap["opponentName"],
             isOpeningMove: eventMap["playersOpeningMove"],
             eventHandler: widget.eventHandler);
-      }));
+      })).then((value) =>
+      {
+        setState(() {
+          _isSearching = false;
+        })
+      });
     });
   }
 

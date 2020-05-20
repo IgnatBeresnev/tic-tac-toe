@@ -4,6 +4,7 @@ import "package:stomp/impl/plugin.dart";
 import "package:stomp/stomp.dart";
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/status.dart' as status;
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 Future<StompClient> connect(String url,
         {String host,
@@ -15,7 +16,7 @@ Future<StompClient> connect(String url,
         void onError(StompClient client, String message, String detail,
             Map<String, String> headers),
         void onFault(StompClient client, error, stackTrace)}) async =>
-    connectWith(await IOWebSocketChannel.connect(url),
+    connectWith(await WebSocketChannel.connect(Uri.parse(url)),
         host: host,
         login: login,
         passcode: passcode,
@@ -25,7 +26,7 @@ Future<StompClient> connect(String url,
         onError: onError,
         onFault: onFault);
 
-Future<StompClient> connectWith(IOWebSocketChannel channel,
+Future<StompClient> connectWith(WebSocketChannel channel,
         {String host,
         String login,
         String passcode,
@@ -46,10 +47,10 @@ Future<StompClient> connectWith(IOWebSocketChannel channel,
         onFault: onFault);
 
 class _WSStompConnector extends StringStompConnector {
-  final IOWebSocketChannel _socket;
+  final WebSocketChannel _socket;
   StreamSubscription _listen;
 
-  static _WSStompConnector startWith(IOWebSocketChannel socket) =>
+  static _WSStompConnector startWith(WebSocketChannel socket) =>
       new _WSStompConnector(socket);
 
   _WSStompConnector(this._socket) {
