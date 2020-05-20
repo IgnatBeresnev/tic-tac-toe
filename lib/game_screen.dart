@@ -68,7 +68,12 @@ class GamePageState extends State<GamePage> {
                   Padding(
                     padding: const EdgeInsets.only(top: 30),
                     child: _buildField(),
-                  )
+                  ),
+                  Padding(
+                      padding: const EdgeInsets.only(top: 30),
+                      child: Visibility(
+                          visible: _gameOverResult != null,
+                          child: _getExitButton()))
                 ],
               ),
             ),
@@ -77,7 +82,7 @@ class GamePageState extends State<GamePage> {
   }
 
   Function _onBackButtonPressed() {
-    if (_gameOverResult != null) { // already over, can leave freely now
+    if (_gameOverResult != null) {
       return () async => false;
     } else {
       return () =>
@@ -94,15 +99,7 @@ class GamePageState extends State<GamePage> {
         FlatButton(
           child: Text('Yes'),
           onPressed: () {
-            http.post(
-                "http://192.168.0.14:8080/game/" + widget.gameId + "/leave",
-                headers: <String, String>{
-                  'Content-Type': 'application/json; charset=UTF-8',
-                  'Accept': 'application/json'
-                },
-                body: jsonEncode(<String, String>{
-                  'playerId': widget.player.id,
-                }));
+            _sendLeaveGame();
             Navigator.pop(context, true);
           },
         ),
@@ -112,6 +109,17 @@ class GamePageState extends State<GamePage> {
         ),
       ],
     );
+  }
+
+  void _sendLeaveGame() {
+    http.post("http://192.168.0.14:8080/game/" + widget.gameId + "/leave",
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Accept': 'application/json'
+        },
+        body: jsonEncode(<String, String>{
+          'playerId': widget.player.id,
+        }));
   }
 
   void _subscribeToEvents() {
@@ -254,10 +262,9 @@ class GamePageState extends State<GamePage> {
           child: MaterialButton(
             color: Colors.white,
             disabledColor: Colors.white70,
-            onPressed: _gameOverResult == null && _isMyTurn ? () =>
-            {
-              _sendMove(x, y)
-            } : null,
+            onPressed: _gameOverResult == null && _isMyTurn
+                ? () => {_sendMove(x, y)}
+                : null,
             child: Text(_field[y][x], style: TextStyle(fontSize: 50)),
           )),
     );
@@ -276,6 +283,18 @@ class GamePageState extends State<GamePage> {
         'x': x.toString(),
         'y': y.toString(),
       }),
+    );
+  }
+
+  Widget _getExitButton() {
+    return RaisedButton(
+      onPressed: () {
+        if (_gameOverResult == null) {
+          _sendLeaveGame();
+        }
+        Navigator.pop(context);
+      },
+      child: Center(child: Text('Leave game')),
     );
   }
 }
