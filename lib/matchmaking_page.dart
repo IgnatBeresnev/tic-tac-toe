@@ -73,7 +73,7 @@ class _MatchmakingPageState extends State<MatchmakingPage> {
     final onPressed = () {
       http
           .post(
-        "http://192.168.0.14:8080/matchmaking/" +
+        "https://tictac-api.beresnev.me/matchmaking/" +
             (_isSearching ? "dequeue" : "enqueue"),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',

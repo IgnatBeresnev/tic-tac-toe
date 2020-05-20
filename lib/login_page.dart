@@ -83,7 +83,7 @@ class _LoginPageState extends State<LoginPage> {
 
           http
               .post(
-            "http://192.168.0.14:8080/registration",
+            "https://tictac-api.beresnev.me/registration",
             headers: <String, String>{
               'Content-Type': 'application/json; charset=UTF-8',
               'Accept': 'application/json'
@@ -137,7 +137,7 @@ class _LoginPageState extends State<LoginPage> {
 
   EventHandler _stompSubscribe(String playerId) {
     final eventHandler = EventHandler();
-    connect("ws://192.168.0.14:8080/ws/stomp/websocket").then((client) {
+    connect("wss://tictac-api.beresnev.me/ws/stomp/websocket").then((client) {
       client.subscribeString(Uuid().v4(), "/user/events",
               (Map<String, String> headers, String message) {
             final eventMap = json.decode(message);
