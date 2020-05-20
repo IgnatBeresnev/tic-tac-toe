@@ -273,7 +273,7 @@ class GamePageState extends State<GamePage> {
   void _sendMove(int x, int y) {
     print("Sending x and y: " + x.toString() + "; " + y.toString());
     http.post(
-      "https://tictac-api.beresnev.me/game" + widget.gameId + "/move",
+      "https://tictac-api.beresnev.me/game/" + widget.gameId + "/move",
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
         'Accept': 'application/json'
